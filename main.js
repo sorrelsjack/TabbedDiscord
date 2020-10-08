@@ -6,11 +6,18 @@ const { app, BrowserWindow, BrowserView } = require('electron');
 const Discord = require('discord.js');
 const client = new Discord.Client();
 
-const DiscordOauth2 = require("discord-oauth2");
+const DiscordOauth2 = require('discord-oauth2');
 const oauth = new DiscordOauth2();
 
 const redirectUrl = 'https://discord.com/channels/@me';
 const discordLoginUrl = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=identify%20guilds`;
+
+const getUrlParameter = (url, name) => {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    var results = regex.exec(url);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+};
 
 const createWindow = () => {
     const win = new BrowserWindow({
@@ -28,7 +35,7 @@ const createWindow = () => {
     view.webContents.addListener('did-navigate', () => {
         if (view.webContents.getURL().includes(`${redirectUrl}?`)) {
             console.log('Navigation successful');
-            //getToken();
+            getToken(getUrlParameter(view.webContents.getURL(), 'code'));
         }
     })
 
@@ -38,22 +45,23 @@ const createWindow = () => {
 
 app.whenReady().then(createWindow);
 
-const getToken = async () => {
-    let token = '';
+const getToken = async (code) => {
+    let res = '';
 
     try {
-        token = await oauth.tokenRequest({
-            clientId: proccess.env.CLIENT_ID,
+        res = await oauth.tokenRequest({
+            clientId: process.env.CLIENT_ID,
             clientSecret: process.env.CLIENT_SECRET,
-            code: "query code",
-            scope: "identify guilds",
-            grantType: "authorization_code",
+            code: code,
+            scope: 'identify guilds',
+            grantType: 'authorization_code',
             redirectUri: redirectUrl
         });
+
+        const guilds = await oauth.getUserGuilds(res.access_token);
+        console.log(guilds)
     }
     catch (e) {
         console.log(e);
     }
-
-    console.log(token)
 }
