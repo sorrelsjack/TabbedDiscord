@@ -4,3 +4,5 @@ const getUrlParameter = (url, name) => {
     var results = regex.exec(url);
     return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 };
+
+module.exports = getUrlParameter;
