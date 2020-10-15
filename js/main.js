@@ -27,6 +27,8 @@ const createWindow = () => {
     const view = new BrowserView();
     win.setBrowserView(view);
 
+    ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => view.setBounds({ x: 0, y: 0, width: win.getContentBounds().width, height: win.getContentBounds().height })));
+
     view.setBounds({ x: 0, y: 0, width: 1200, height: 900 });
     view.webContents.loadURL(discordLoginUrl);
 
