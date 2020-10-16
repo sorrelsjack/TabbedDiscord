@@ -25,7 +25,7 @@ const createWindow = () => {
     });
 
     const view = new BrowserView();
-    win.setBrowserView(view);
+    win.addBrowserView(view);
 
     ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => view.setBounds({ x: 0, y: 0, width: win.getContentBounds().width, height: win.getContentBounds().height })));
 
