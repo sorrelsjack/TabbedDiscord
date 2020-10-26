@@ -38,17 +38,25 @@ const createWindow = () => {
         }
     });
 
-    for (let i = 0; i < browserViews.length; i++) {
-        // Calculate what the y value of the current view should be
-        let y = (WINDOW_HEIGHT / browserViews.length) * (i);
+    let contentHeight = win.getContentSize()[1];
 
+    for (let i = 0; i < browserViews.length; i++) {
+        let y = 0;
+
+        // Calculate what the y value of the current view should be
+        const calculateY = () => y = Math.ceil((win.getContentSize()[1] / browserViews.length) * i);
+
+        calculateY();
         win.addBrowserView(browserViews[i]);
 
         // Attaching three event listeners to the current view
-        ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => browserViews[i].setBounds({ x: 0, y: y, width: win.getContentBounds().width, height: win.getContentBounds().height })));
-        
+        ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => {
+            calculateY();
+            browserViews[i].setBounds({ x: 0, y: y, width: win.getContentSize()[0], height: Math.ceil(win.getContentSize()[1] / browserViews.length) })
+        }));
+
         // Set the dimensions and location of the current view. The y is calculated basically where the last view stopped and the height is caclulated to give each view an equal amount of room
-        browserViews[i].setBounds({ x: 0, y: y, width: WINDOW_WIDTH, height: WINDOW_HEIGHT / browserViews.length });
+        browserViews[i].setBounds({ x: 0, y: y, width: WINDOW_WIDTH, height: (contentHeight / browserViews.length) });
         browserViews[i].webContents.loadURL(discordLoginUrl);
 
         // Once the view navigates to a URL that contains our redirect URL, forcibly navigate the page to be on the first server in the list returned by the API
