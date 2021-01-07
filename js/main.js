@@ -10,6 +10,7 @@ const oauth = new DiscordOauth2();
 const WINDOW_HEIGHT = 900;
 const WINDOW_WIDTH = 1200;
 
+let logInView = null;
 let browserViews = null;
 
 let accessToken = '';
@@ -18,9 +19,10 @@ let accessToken = '';
 
 const baseUrl = 'https://discord.com';
 const redirectUrl = `${baseUrl}/channels/@me`;
-const discordLoginUrl = `${baseUrl}/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=identify%20guilds`;
+const discordLoginUrl = `${baseUrl}/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=identify%20guilds&prompt=none`;
 
 const init = () => {
+    logInView = new BrowserView();
     let firstView = new BrowserView();
     let secondView = new BrowserView();
     let thirdView = new BrowserView();
@@ -40,33 +42,54 @@ const createWindow = () => {
 
     let contentHeight = win.getContentSize()[1];
 
-    for (let i = 0; i < browserViews.length; i++) {
-        let y = 0;
+    const createMainViews = () => {
+        win.removeBrowserView(logInView);
+        let firstChannel = '';
 
-        // Calculate what the y value of the current view should be
-        const calculateY = () => y = Math.ceil((win.getContentSize()[1] / browserViews.length) * i);
-
-        calculateY();
-        win.addBrowserView(browserViews[i]);
-
-        // Attaching three event listeners to the current view
-        ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => {
+        for (let i = 0; i < browserViews.length; i++) {
+            let y = 0;
+    
+            // Calculate what the y value of the current view should be
+            const calculateY = () => y = Math.ceil((win.getContentSize()[1] / browserViews.length) * i);
+    
             calculateY();
-            browserViews[i].setBounds({ x: 0, y: y, width: win.getContentSize()[0], height: Math.ceil(win.getContentSize()[1] / browserViews.length) })
-        }));
-
-        // Set the dimensions and location of the current view. The y is calculated basically where the last view stopped and the height is caclulated to give each view an equal amount of room
-        browserViews[i].setBounds({ x: 0, y: y, width: WINDOW_WIDTH, height: (contentHeight / browserViews.length) });
-        browserViews[i].webContents.loadURL(discordLoginUrl);
-
-        // Once the view navigates to a URL that contains our redirect URL, forcibly navigate the page to be on the first server in the list returned by the API
-        browserViews[i].addListener('did-navigate', async () => {
-            if (browserViews[i].webContents.getURL().includes(`${redirectUrl}?`)) {
-                await getToken(getUrlParameter(browserViews[i].webContents.getURL(), 'code'));
-                browserViews[i].webContents.loadURL(getChannelUrl((await oauth.getUserGuilds(accessToken))[0].id)); // TODO: Probably store the guilds in a variable
+            win.addBrowserView(browserViews[i]);
+    
+            // Attaching three event listeners to the current view
+            ['will-resize', 'maximize', 'unmaximize'].forEach(e => win.addListener(e, () => {
+                calculateY();
+                browserViews[i].setBounds({ x: 0, y: y, width: win.getContentSize()[0], height: Math.ceil(win.getContentSize()[1] / browserViews.length) })
+            }));
+    
+            // Set the dimensions and location of the current view. The y is calculated basically where the last view stopped and the height is caclulated to give each view an equal amount of room
+            browserViews[i].setBounds({ x: 0, y: y, width: WINDOW_WIDTH, height: (contentHeight / browserViews.length) });
+    
+            const goToFirstScreen = async () => {
+                const guildId = (await oauth.getUserGuilds(accessToken))[0].id;
+                firstChannel = getChannelUrl(guildId);
+                browserViews[i].webContents.loadURL(firstChannel); // TODO: We are missing the header
             }
-        })
-    };
+    
+            goToFirstScreen();
+
+        };
+
+        console.log(browserViews)
+    }
+
+    win.addBrowserView(logInView);
+    logInView.setBounds({ x: 0, y: 0, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
+
+    logInView.webContents.loadURL(discordLoginUrl);
+
+    // Once the view navigates to a URL that contains our redirect URL, forcibly navigate the page to be on the first server in the list returned by the API
+    logInView.webContents.on('did-navigate', async () => {
+        if (logInView.webContents.getURL().includes(`${redirectUrl}?`)) {
+            await getToken(getUrlParameter(logInView.webContents.getURL(), 'code'));
+            createMainViews();
+            //browserViews[i].webContents.loadURL(getChannelUrl((await oauth.getUserGuilds(accessToken))[0].id)); // TODO: Probably store the guilds in a variable
+        }
+    })
 
     win.loadFile('index.html');
 }
@@ -85,8 +108,6 @@ const getToken = async (code) => {
         });
 
         accessToken = res.access_token;
-        const guilds = await oauth.getUserGuilds(accessToken);
-        console.log(guilds)
     }
     catch (e) {
         console.log(e);
