@@ -18,7 +18,7 @@ let accessToken = '';
 
 const baseUrl = 'https://discord.com';
 const redirectUrl = `${baseUrl}/channels/@me`;
-const discordLoginUrl = `${baseUrl}/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=identify%20guilds`;
+const discordLoginUrl = `${baseUrl}/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=identify%20guilds&prompt=none`;
 
 const init = () => {
     let firstView = new BrowserView();
@@ -60,7 +60,7 @@ const createWindow = () => {
         browserViews[i].webContents.loadURL(discordLoginUrl);
 
         // Once the view navigates to a URL that contains our redirect URL, forcibly navigate the page to be on the first server in the list returned by the API
-        browserViews[i].addListener('did-navigate', async () => {
+        browserViews[i].webContents.on('did-navigate', async () => {
             if (browserViews[i].webContents.getURL().includes(`${redirectUrl}?`)) {
                 await getToken(getUrlParameter(browserViews[i].webContents.getURL(), 'code'));
                 browserViews[i].webContents.loadURL(getChannelUrl((await oauth.getUserGuilds(accessToken))[0].id)); // TODO: Probably store the guilds in a variable
