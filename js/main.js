@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { app, BrowserWindow, BrowserView, Menu } = require('electron');
+const { app, BrowserWindow, BrowserView, Menu, ipcRenderer, ipcMain } = require('electron');
 const Discord = require('discord.js');
 const DiscordOauth2 = require('discord-oauth2');
 const getUrlParameter = require('./utils');
@@ -63,11 +63,12 @@ const createWindow = () => {
     
             // Set the dimensions and location of the current view. The y is calculated basically where the last view stopped and the height is caclulated to give each view an equal amount of room
             browserViews[i].setBounds({ x: 0, y: y, width: WINDOW_WIDTH, height: (contentHeight / browserViews.length) });
-    
+            browserViews[i].webContents.loadURL(discordLoginUrl);
+
             const goToFirstScreen = async () => {
                 const guildId = (await oauth.getUserGuilds(accessToken))[0].id;
                 firstChannel = getChannelUrl(guildId);
-                browserViews[i].webContents.loadURL(firstChannel); // TODO: We are missing the header
+                browserViews[i].webContents.loadURL(firstChannel);
             }
     
             goToFirstScreen();
@@ -87,7 +88,6 @@ const createWindow = () => {
         if (logInView.webContents.getURL().includes(`${redirectUrl}?`)) {
             await getToken(getUrlParameter(logInView.webContents.getURL(), 'code'));
             createMainViews();
-            //browserViews[i].webContents.loadURL(getChannelUrl((await oauth.getUserGuilds(accessToken))[0].id)); // TODO: Probably store the guilds in a variable
         }
     })
 
